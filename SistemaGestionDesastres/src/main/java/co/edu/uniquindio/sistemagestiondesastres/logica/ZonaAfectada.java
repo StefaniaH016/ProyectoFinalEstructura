@@ -1,92 +1,101 @@
 package co.edu.uniquindio.sistemagestiondesastres.logica;
 
-import java.util.LinkedList;
+import co.edu.uniquindio.sistemagestiondesastres.logica.enums.TipoRecurso;
+
+import java.util.ArrayList;
+import java.util.List;
 
 public class ZonaAfectada {
 
-    String idZonaAfectada;
-    String nombreZonaAfectada;
-    int poblacion;
-    int nivelDeRiesgo;
-    Ruta ruta;
-    LinkedList<Recurso> listaRecursos;
-    LinkedList<EquipoDeRescate> listaEquipoDeRescates;
-    LinkedList<Evacuacion> evacuaciones;
+    // 🔹 Atributos principales
+    private String nombre;
+    private int nivelRiesgo;          // Escala 1–10
+    private int personasAfectadas;
+    private List<Recurso> recursosAsignados;
+    private String estado;            // Ej: “En riesgo”, “Evacuando”, “Estable”
 
-    public ZonaAfectada(String idZonaAfectada, String nombreZonaAfectada, int poblacion, int nivelRiesgo) {
-        this.idZonaAfectada = idZonaAfectada;
-        this.nombreZonaAfectada = nombreZonaAfectada;
-        this.poblacion = poblacion;
-        this.nivelDeRiesgo = nivelRiesgo;
-        this.ruta = new Ruta();
-        this.listaRecursos = new LinkedList<>();
-        this.listaEquipoDeRescates = new LinkedList<>();
-        this.evacuaciones = new LinkedList<>();
-
+    // -------------------------------
+    // CONSTRUCTOR
+    // -------------------------------
+    public ZonaAfectada(String nombre, int nivelRiesgo, int personasAfectadas) {
+        this.nombre = nombre;
+        this.nivelRiesgo = nivelRiesgo;
+        this.personasAfectadas = personasAfectadas;
+        this.recursosAsignados = new ArrayList<>();
+        this.estado = determinarEstado();
     }
 
-    public String getIdZonaAfectada() {
-        return idZonaAfectada;
+    // -------------------------------
+    // MÉTODOS DE LÓGICA
+    // -------------------------------
+
+    // Actualiza el estado según el nivel de riesgo
+    private String determinarEstado() {
+        if (nivelRiesgo >= 8) return "Crítico";
+        else if (nivelRiesgo >= 5) return "En riesgo";
+        else if (nivelRiesgo >= 3) return "Vigilancia";
+        else return "Estable";
     }
 
-    public void setIdZonaAfectada(String idZonaAfectada) {
-        this.idZonaAfectada = idZonaAfectada;
+    public void actualizarEstado() {
+        this.estado = determinarEstado();
     }
 
-    public String getNombreZonaAfectada() {
-        return nombreZonaAfectada;
+    // Asigna un recurso a la zona
+    public void agregarRecursoAsignado(Recurso recurso) {
+        recursosAsignados.add(recurso);
     }
 
-    public void setNombreZonaAfectada(String nombreZonaAfectada) {
-        this.nombreZonaAfectada = nombreZonaAfectada;
+    // Suma la cantidad total de recursos asignados
+    public int obtenerTotalRecursos() {
+        int total = 0;
+        for (Recurso r : recursosAsignados) {
+            total += r.getCantidad();
+        }
+        return total;
     }
 
-    public int getPoblacion() {
-        return poblacion;
+    // -------------------------------
+    // GETTERS Y SETTERS
+    // -------------------------------
+    public String getNombre() { return nombre; }
+
+    public void setNombre(String nombre) { this.nombre = nombre; }
+
+    public int getNivelRiesgo() { return nivelRiesgo; }
+
+    public void setNivelRiesgo(int nivelRiesgo) {
+        this.nivelRiesgo = nivelRiesgo;
+        actualizarEstado();
     }
 
-    public void setPoblacion(int poblacion) {
-        this.poblacion = poblacion;
+    public int getPersonasAfectadas() { return personasAfectadas; }
+
+    public void setPersonasAfectadas(int personasAfectadas) {
+        this.personasAfectadas = personasAfectadas;
     }
 
-    public int getNivelDeRiesgo() {
-        return nivelDeRiesgo;
+    public List<Recurso> getRecursosAsignados() { return recursosAsignados; }
+
+    public void setRecursosAsignados(List<Recurso> recursosAsignados) {
+        this.recursosAsignados = recursosAsignados;
     }
 
-    public void setNivelDeRiesgo(int nivelDeRiesgo) {
-        this.nivelDeRiesgo = nivelDeRiesgo;
-    }
+    public String getEstado() { return estado; }
 
-    public Ruta getRuta() {
-        return ruta;
-    }
+    public void setEstado(String estado) { this.estado = estado; }
 
-    public void setRuta(Ruta ruta) {
-        this.ruta = ruta;
+    // -------------------------------
+    // REPRESENTACIÓN EN TEXTO
+    // -------------------------------
+    @Override
+    public String toString() {
+        return "ZonaAfectada{" +
+                "nombre='" + nombre + '\'' +
+                ", nivelRiesgo=" + nivelRiesgo +
+                ", personasAfectadas=" + personasAfectadas +
+                ", estado='" + estado + '\'' +
+                ", recursosAsignados=" + recursosAsignados.size() +
+                '}';
     }
-
-    public LinkedList<Recurso> getListaRecursos() {
-        return listaRecursos;
-    }
-
-    public void setListaRecursos(LinkedList<Recurso> listaRecursos) {
-        this.listaRecursos = listaRecursos;
-    }
-
-    public LinkedList<EquipoDeRescate> getListaEquipoDeRescates() {
-        return listaEquipoDeRescates;
-    }
-
-    public LinkedList<Evacuacion> getEvacuaciones() {
-        return evacuaciones;
-    }
-
-    public void setEvacuaciones(LinkedList<Evacuacion> listaEvacuaciones) {
-        this.evacuaciones = listaEvacuaciones;
-    }
-
-    public void setListaEquipoDeRescates(LinkedList<EquipoDeRescate> listaEquipoDeRescates) {
-        this.listaEquipoDeRescates = listaEquipoDeRescates;
-    }
-
 }
