@@ -1,93 +1,118 @@
 package co.edu.uniquindio.sistemagestiondesastres.logica;
 
-import co.edu.uniquindio.sistemagestiondesastres.logica.enums.TipoRecurso;
-
 import java.util.ArrayList;
 import java.util.List;
 
 public class ZonaAfectada {
 
-    // 🔹 Atributos principales
     private String nombre;
     private int nivelRiesgo;          // Escala 1–10
     private int personasAfectadas;
     private List<Recurso> recursosAsignados;
     private String estado;            // Ej: “En riesgo”, “Evacuando”, “Estable”
 
-    // -------------------------------
-    // CONSTRUCTOR
-    // -------------------------------
-    public ZonaAfectada(String nombre, int nivelRiesgo, int personasAfectadas) {
+    public ZonaAfectada(String nombre, int nivelRiesgo, int personasAfectadas, String estado) {
         this.nombre = nombre;
         this.nivelRiesgo = nivelRiesgo;
         this.personasAfectadas = personasAfectadas;
+        this.estado = estado;
         this.recursosAsignados = new ArrayList<>();
-        this.estado = determinarEstado();
     }
 
-    // -------------------------------
-    // MÉTODOS DE LÓGICA
-    // -------------------------------
+    // ======== Getters y Setters ========
 
-    // Actualiza el estado según el nivel de riesgo
-    private String determinarEstado() {
-        if (nivelRiesgo >= 8) return "Crítico";
-        else if (nivelRiesgo >= 5) return "En riesgo";
-        else if (nivelRiesgo >= 3) return "Vigilancia";
-        else return "Estable";
+    public String getNombre() {
+        return nombre;
     }
 
-    public void actualizarEstado() {
-        this.estado = determinarEstado();
+    public void setNombre(String nombre) {
+        this.nombre = nombre;
     }
 
-    // Asigna un recurso a la zona
-    public void agregarRecursoAsignado(Recurso recurso) {
-        recursosAsignados.add(recurso);
+    public int getNivelRiesgo() {
+        return nivelRiesgo;
     }
-
-    // Suma la cantidad total de recursos asignados
-    public int obtenerTotalRecursos() {
-        int total = 0;
-        for (Recurso r : recursosAsignados) {
-            total += r.getCantidad();
-        }
-        return total;
-    }
-
-    // -------------------------------
-    // GETTERS Y SETTERS
-    // -------------------------------
-    public String getNombre() { return nombre; }
-
-    public void setNombre(String nombre) { this.nombre = nombre; }
-
-    public int getNivelRiesgo() { return nivelRiesgo; }
 
     public void setNivelRiesgo(int nivelRiesgo) {
-        this.nivelRiesgo = nivelRiesgo;
-        actualizarEstado();
+        if (nivelRiesgo >= 1 && nivelRiesgo <= 10) {
+            this.nivelRiesgo = nivelRiesgo;
+        } else {
+            System.out.println("⚠️ El nivel de riesgo debe estar entre 1 y 10.");
+        }
     }
 
-    public int getPersonasAfectadas() { return personasAfectadas; }
+    public int getPersonasAfectadas() {
+        return personasAfectadas;
+    }
 
     public void setPersonasAfectadas(int personasAfectadas) {
         this.personasAfectadas = personasAfectadas;
     }
 
-    public List<Recurso> getRecursosAsignados() { return recursosAsignados; }
-
-    public void setRecursosAsignados(List<Recurso> recursosAsignados) {
-        this.recursosAsignados = recursosAsignados;
+    public List<Recurso> getRecursosAsignados() {
+        return recursosAsignados;
     }
 
-    public String getEstado() { return estado; }
+    public String getEstado() {
+        return estado;
+    }
 
-    public void setEstado(String estado) { this.estado = estado; }
+    public void setEstado(String estado) {
+        this.estado = estado;
+    }
 
-    // -------------------------------
-    // REPRESENTACIÓN EN TEXTO
-    // -------------------------------
+    // ======== Métodos funcionales ========
+
+    /** Asigna un recurso a la zona **/
+    public void asignarRecurso(Recurso recurso) {
+        if (!recursosAsignados.contains(recurso)) {
+            recursosAsignados.add(recurso);
+            System.out.println("✅ Recurso " + recurso.getId() + " asignado a la zona " + nombre);
+        } else {
+            System.out.println("⚠️ El recurso " + recurso.getId() + " ya está asignado a esta zona.");
+        }
+    }
+
+    /** Elimina un recurso de la zona **/
+    public void eliminarRecurso(Recurso recurso) {
+        recursosAsignados.remove(recurso);
+        System.out.println("🗑️ Recurso " + recurso.getId() + " removido de la zona " + nombre);
+    }
+
+    /** Calcula el nivel de prioridad de atención basado en riesgo y personas afectadas **/
+    public int calcularPrioridad() {
+        int prioridad = (nivelRiesgo * 2) + (personasAfectadas / 50);
+        return Math.min(prioridad, 10); // Se limita a un máximo de 10
+    }
+
+    /** Evalúa si la zona necesita evacuación inmediata **/
+    public boolean necesitaEvacuacion() {
+        return nivelRiesgo >= 7 || personasAfectadas > 1000;
+    }
+
+    /** Actualiza el estado automáticamente según el nivel de riesgo **/
+    public void actualizarEstado() {
+        if (nivelRiesgo >= 8) {
+            estado = "Evacuando";
+        } else if (nivelRiesgo >= 5) {
+            estado = "En riesgo";
+        } else {
+            estado = "Estable";
+        }
+    }
+
+    /** Muestra información detallada de la zona **/
+    public void mostrarInfoZona() {
+        System.out.println("=== Información de Zona Afectada ===");
+        System.out.println("Nombre: " + nombre);
+        System.out.println("Nivel de Riesgo: " + nivelRiesgo);
+        System.out.println("Personas Afectadas: " + personasAfectadas);
+        System.out.println("Estado: " + estado);
+        System.out.println("Recursos Asignados: " + recursosAsignados.size());
+        System.out.println("Prioridad: " + calcularPrioridad());
+        System.out.println("====================================");
+    }
+
     @Override
     public String toString() {
         return "ZonaAfectada{" +

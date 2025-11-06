@@ -9,65 +9,116 @@ public class GrafoDirigido {
         this.nodos = new HashMap<>();
     }
 
-    public void agregarNodo(String nombre) {
+    // ----- Gestión básica -----
+
+    public void agregarNodo(String nombre, int nivelEmergencia, int personasAfectadas) {
         if (!nodos.containsKey(nombre)) {
-            nodos.put(nombre, new NodoGrafo(nombre));
+            nodos.put(nombre, new NodoGrafo(nombre, nivelEmergencia, personasAfectadas));
         }
     }
 
-    public void agregarArista(String origen, String destino, int peso) {
+    public void eliminarNodo(String nombre) {
+        NodoGrafo nodo = nodos.remove(nombre);
+        if (nodo != null) {
+            for (NodoGrafo n : nodos.values()) {
+                n.eliminarAdyacente(nodo);
+            }
+        }
+    }
+
+    public void agregarRuta(String origen, String destino, double distancia) {
         NodoGrafo nodoOrigen = nodos.get(origen);
         NodoGrafo nodoDestino = nodos.get(destino);
         if (nodoOrigen != null && nodoDestino != null) {
-            nodoOrigen.agregarAdyacente(nodoDestino, peso);
+            nodoOrigen.agregarAdyacente(nodoDestino, distancia);
         }
     }
 
-    public List<String> obtenerRutaMasCorta(String inicio, String fin) {
-        Map<NodoGrafo, Integer> distancias = new HashMap<>();
-        Map<NodoGrafo, NodoGrafo> previos = new HashMap<>();
-        PriorityQueue<NodoGrafo> cola = new PriorityQueue<>(Comparator.comparingInt(distancias::get));
+    public NodoGrafo obtenerNodo(String nombre) {
+        return nodos.get(nombre);
+    }
 
-        NodoGrafo nodoInicio = nodos.get(inicio);
-        NodoGrafo nodoFin = nodos.get(fin);
+    public Collection<NodoGrafo> obtenerNodos() {
+        return nodos.values();
+    }
 
-        for (NodoGrafo n : nodos.values()) {
-            distancias.put(n, Integer.MAX_VALUE);
+    public void mostrarGrafo() {
+        System.out.println("=== Grafo de Rutas ===");
+        for (NodoGrafo nodo : nodos.values()) {
+            System.out.println(nodo);
         }
-        distancias.put(nodoInicio, 0);
-        cola.add(nodoInicio);
+    }
+
+    // ----- Algoritmo de Dijkstra -----
+
+    public Map<NodoGrafo, Double> calcularRutasMasCortas(String origenNombre) {
+        NodoGrafo origen = nodos.get(origenNombre);
+        if (origen == null) return Collections.emptyMap();
+
+        Map<NodoGrafo, Double> distancias = new HashMap<>();
+        Set<NodoGrafo> visitados = new HashSet<>();
+        PriorityQueue<NodoGrafo> cola = new PriorityQueue<>(Comparator.comparingDouble(distancias::get));
+
+        for (NodoGrafo nodo : nodos.values()) {
+            distancias.put(nodo, Double.POSITIVE_INFINITY);
+        }
+        distancias.put(origen, 0.0);
+        cola.add(origen);
 
         while (!cola.isEmpty()) {
             NodoGrafo actual = cola.poll();
+            if (!visitados.add(actual)) continue;
 
-            if (actual == nodoFin) break;
+            for (Map.Entry<NodoGrafo, Double> ady : actual.getAdyacentes().entrySet()) {
+                NodoGrafo vecino = ady.getKey();
+                double nuevaDist = distancias.get(actual) + ady.getValue();
+                if (nuevaDist < distancias.get(vecino)) {
+                    distancias.put(vecino, nuevaDist);
+                    cola.add(vecino);
+                }
+            }
+        }
+        return distancias;
+    }
 
-            for (Map.Entry<NodoGrafo, Integer> entry : actual.getAdyacentes().entrySet()) {
-                NodoGrafo vecino = entry.getKey();
-                int nuevoDist = distancias.get(actual) + entry.getValue();
+    public List<NodoGrafo> obtenerRutaMasCorta(String origen, String destino) {
+        Map<NodoGrafo, Double> distancias = new HashMap<>();
+        Map<NodoGrafo, NodoGrafo> predecesores = new HashMap<>();
+        PriorityQueue<NodoGrafo> cola = new PriorityQueue<>(Comparator.comparingDouble(distancias::get));
+        Set<NodoGrafo> visitados = new HashSet<>();
 
-                if (nuevoDist < distancias.get(vecino)) {
-                    distancias.put(vecino, nuevoDist);
-                    previos.put(vecino, actual);
+        NodoGrafo nodoOrigen = nodos.get(origen);
+        NodoGrafo nodoDestino = nodos.get(destino);
+
+        if (nodoOrigen == null || nodoDestino == null) return Collections.emptyList();
+
+        for (NodoGrafo n : nodos.values()) {
+            distancias.put(n, Double.POSITIVE_INFINITY);
+        }
+        distancias.put(nodoOrigen, 0.0);
+        cola.add(nodoOrigen);
+
+        while (!cola.isEmpty()) {
+            NodoGrafo actual = cola.poll();
+            if (!visitados.add(actual)) continue;
+
+            for (Map.Entry<NodoGrafo, Double> ady : actual.getAdyacentes().entrySet()) {
+                NodoGrafo vecino = ady.getKey();
+                double nuevaDist = distancias.get(actual) + ady.getValue();
+                if (nuevaDist < distancias.get(vecino)) {
+                    distancias.put(vecino, nuevaDist);
+                    predecesores.put(vecino, actual);
                     cola.add(vecino);
                 }
             }
         }
 
-        List<String> ruta = new LinkedList<>();
-        for (NodoGrafo at = nodoFin; at != null; at = previos.get(at)) {
-            ruta.add(0, at.getNombre());
+        List<NodoGrafo> ruta = new LinkedList<>();
+        NodoGrafo actual = nodoDestino;
+        while (actual != null) {
+            ruta.add(0, actual);
+            actual = predecesores.get(actual);
         }
         return ruta;
-    }
-
-    public void mostrarGrafo() {
-        for (NodoGrafo nodo : nodos.values()) {
-            System.out.print(nodo.getNombre() + " -> ");
-            for (NodoGrafo ady : nodo.getAdyacentes().keySet()) {
-                System.out.print(ady.getNombre() + "(" + nodo.getAdyacentes().get(ady) + ") ");
-            }
-            System.out.println();
-        }
     }
 }

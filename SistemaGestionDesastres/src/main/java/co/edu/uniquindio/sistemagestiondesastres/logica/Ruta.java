@@ -6,26 +6,23 @@ import java.util.List;
 
 public class Ruta {
 
-    String idRuta;
-    String origen;
-    String destino;
-    Date tiempo;
-    double distancia;
-    List<ZonaAfectada> zonasAfectadas;
+    private String idRuta;
+    private String origen;
+    private String destino;
+    private Date tiempo;
+    private double distancia;
+    private List<ZonaAfectada> zonasAfectadas;
 
-    public Ruta(String idRuta, String origen, String destino, Date tiempo, double dist) {
+    public Ruta(String idRuta, String origen, String destino, Date tiempo, double distancia) {
         this.idRuta = idRuta;
         this.origen = origen;
         this.destino = destino;
         this.tiempo = tiempo;
-        this.distancia = dist;
-        zonasAfectadas = new ArrayList<ZonaAfectada>();
+        this.distancia = distancia;
+        this.zonasAfectadas = new ArrayList<>();
     }
 
-    public Ruta() {
-
-    }
-
+    // ===== Getters y Setters =====
     public String getIdRuta() {
         return idRuta;
     }
@@ -70,8 +67,42 @@ public class Ruta {
         return zonasAfectadas;
     }
 
-    public void setZonasAfectadas(List<ZonaAfectada> zonasAfectadas) {
-        this.zonasAfectadas = zonasAfectadas;
+    // ===== Métodos funcionales =====
+
+    /** Agrega una zona afectada a la ruta **/
+    public void agregarZonaAfectada(ZonaAfectada zona) {
+        if (!zonasAfectadas.contains(zona)) {
+            zonasAfectadas.add(zona);
+            System.out.println("Zona afectada " + zona.getNombre() + " agregada a la ruta " + idRuta);
+        }
     }
 
+    /** Elimina una zona afectada de la ruta **/
+    public void eliminarZonaAfectada(ZonaAfectada zona) {
+        zonasAfectadas.remove(zona);
+    }
+
+    /** Calcula el tiempo estimado total de evacuación en base a las zonas **/
+    public double calcularTiempoEstimado() {
+        double tiempoBase = distancia / 50.0; // ejemplo: velocidad promedio 50 km/h
+        double penalizacionZonas = zonasAfectadas.size() * 0.5; // 0.5 horas por zona afectada
+        return tiempoBase + penalizacionZonas;
+    }
+
+    /** Verifica si la ruta pasa por una zona específica **/
+    public boolean pasaPorZona(String nombreZona) {
+        return zonasAfectadas.stream()
+                .anyMatch(z -> z.getNombre().equalsIgnoreCase(nombreZona));
+    }
+
+    @Override
+    public String toString() {
+        return "Ruta{" +
+                "idRuta='" + idRuta + '\'' +
+                ", origen='" + origen + '\'' +
+                ", destino='" + destino + '\'' +
+                ", distancia=" + distancia +
+                ", zonasAfectadas=" + zonasAfectadas.size() +
+                '}';
+    }
 }

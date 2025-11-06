@@ -69,5 +69,13 @@ public abstract class Usuario {
         this.listaReportes = listaReportes;
     }
 
+    public boolean autenticar(String usuario, String contrasena) {
+        return this.passwd.equals(usuario) && this.passwd.equals(contrasena);
+    }
+
+    public void cambiarContrasena(String nuevaContrasena) {
+        this.passwd = nuevaContrasena;
+    }
+
 
 }

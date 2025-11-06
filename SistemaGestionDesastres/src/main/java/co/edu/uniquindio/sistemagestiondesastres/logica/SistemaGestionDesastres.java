@@ -3,170 +3,222 @@ package co.edu.uniquindio.sistemagestiondesastres.logica;
 import co.edu.uniquindio.sistemagestiondesastres.estructuras.ArbolDistribucion;
 import co.edu.uniquindio.sistemagestiondesastres.estructuras.ColaPrioridadEvacuaciones;
 import co.edu.uniquindio.sistemagestiondesastres.estructuras.GrafoDirigido;
-import impl.org.controlsfx.collections.MappingChange.Map;
-import co.edu.uniquindio.estructuras.nodos.NodoDistribucion;
+import co.edu.uniquindio.sistemagestiondesastres.estructuras.NodoGrafo;
+import co.edu.uniquindio.sistemagestiondesastres.logica.enums.EstadoEvacuacion;
 
-import java.util.LinkedList;
+import java.time.LocalDate;
 import java.util.*;
-import java.util.List;
-import java.util.Date;
-import java.util.ArrayList;
 
+/**
+ * Clase principal del Sistema de Gestión de Desastres Naturales.
+ * Coordina la gestión de recursos, rutas, evacuaciones, usuarios y reportes.
+ */
 public class SistemaGestionDesastres {
 
-    // 🔹 Patrón Singleton
-    private static SistemaGestionDesastres instance;
-
-    // 🔹 Estructuras principales
     private GrafoDirigido grafoRutas;
     private ArbolDistribucion arbolRecursos;
     private ColaPrioridadEvacuaciones colaEvacuaciones;
 
-    // 🔹 Almacenes de datos
     private Map<String, ZonaAfectada> zonasAfectadas;
     private Map<String, Recurso> recursosDisponibles;
-    private List<String> reportes;
+    private List<Reporte> reportes;
+    private Administrador administrador;
+    private LinkedList<Usuario> listaUsuarios;
 
-    // -------------------------------
-    // CONSTRUCTOR PRIVADO
-    // -------------------------------
-    private SistemaGestionDesastres() {
+    public SistemaGestionDesastres(Administrador administrador) {
         this.grafoRutas = new GrafoDirigido();
+        this.arbolRecursos = new ArbolDistribucion();
         this.colaEvacuaciones = new ColaPrioridadEvacuaciones();
+
         this.zonasAfectadas = new HashMap<>();
         this.recursosDisponibles = new HashMap<>();
         this.reportes = new ArrayList<>();
-
-        // Nodo raíz del árbol de distribución
-        NodoDistribucion raiz = new NodoDistribucion("Centro Nacional", "Recursos generales", 0);
-        this.arbolRecursos = new ArbolDistribucion(raiz);
+        this.administrador = administrador;
+        this.listaUsuarios = new LinkedList<>();
     }
 
-    // -------------------------------
-    // SINGLETON
-    // -------------------------------
-    public static SistemaGestionDesastres getInstance() {
-        if (instance == null) {
-            instance = new SistemaGestionDesastres();
-        }
-        return instance;
-    }
+    // ============================================================
+    // ============== GESTIÓN DE USUARIOS =========================
+    // ============================================================
 
-    // -------------------------------
-    // MÉTODOS DE GESTIÓN DE ZONAS
-    // -------------------------------
-    public void registrarZona(String nombre, int nivelRiesgo, int personasAfectadas) {
-        if (!zonasAfectadas.containsKey(nombre)) {
-            ZonaAfectada zona = new ZonaAfectada(nombre, nivelRiesgo, personasAfectadas);
-            zonasAfectadas.put(nombre, zona);
-            grafoRutas.agregarNodo(nombre);
-            generarReporte("Zona registrada: " + nombre);
+    public void registrarUsuario(Usuario usuario) {
+        if (!listaUsuarios.contains(usuario)) {
+            listaUsuarios.add(usuario);
+            System.out.println("✅ Usuario " + usuario.getNombre() + " registrado correctamente.");
+        } else {
+            System.out.println("⚠️ El usuario ya está registrado.");
         }
     }
 
-    public void actualizarEstadoZona(String nombre, int nuevoNivelRiesgo, int personasAfectadas) {
-        ZonaAfectada zona = zonasAfectadas.get(nombre);
-        if (zona != null) {
-            zona.setNivelRiesgo(nuevoNivelRiesgo);
-            zona.setPersonasAfectadas(personasAfectadas);
-            generarReporte("Zona actualizada: " + nombre + " (riesgo " + nuevoNivelRiesgo + ")");
+    public Usuario autenticarUsuario(String id, String contrasena) {
+        for (Usuario u : listaUsuarios) {
+            if (u.getId().equals(id) && u.getPasswd().equals(contrasena)) {
+                System.out.println("🔓 Autenticación exitosa: " + u.getNombre());
+                return u;
+            }
         }
+        System.out.println("❌ Error de autenticación. Usuario o contraseña incorrectos.");
+        return null;
+    }
+
+    // ============================================================
+    // ============== GESTIÓN DE ZONAS AFECTADAS ==================
+    // ============================================================
+
+    public void registrarZonaAfectada(ZonaAfectada zona) {
+        zonasAfectadas.put(zona.getNombre(), zona);
+        System.out.println("🌍 Zona afectada registrada: " + zona.getNombre());
     }
 
     public ZonaAfectada obtenerZona(String nombre) {
         return zonasAfectadas.get(nombre);
     }
 
-    public Collection<ZonaAfectada> listarZonas() {
-        return zonasAfectadas.values();
-    }
-
-    // -------------------------------
-    // MÉTODOS DE GESTIÓN DE RECURSOS
-    // -------------------------------
-    public void registrarRecurso(String nombre, String tipo, int cantidad) {
-        Recurso recurso = new Recurso(nombre, tipo, cantidad);
-        recursosDisponibles.put(nombre, recurso);
-        generarReporte("Recurso registrado: " + nombre + " (" + tipo + ")");
-    }
-
-    public void asignarRecursoAZona(String nombreZona, String nombreRecurso, int cantidad) {
+    public void actualizarEstadoZona(String nombreZona, int nuevoNivelRiesgo, int nuevasPersonasAfectadas) {
         ZonaAfectada zona = zonasAfectadas.get(nombreZona);
-        Recurso recurso = recursosDisponibles.get(nombreRecurso);
-
-        if (zona != null && recurso != null && recurso.getCantidad() >= cantidad) {
-            recurso.setCantidad(recurso.getCantidad() - cantidad);
-            zona.agregarRecursoAsignado(new Recurso(nombreRecurso, recurso.getTipo(), cantidad));
-
-            NodoDistribucion nodo = new NodoDistribucion(nombreZona, nombreRecurso, cantidad);
-            arbolRecursos.agregarNodo(arbolRecursos.getRaiz(), nodo);
-
-            generarReporte("Recurso asignado: " + cantidad + " de " + nombreRecurso + " a " + nombreZona);
+        if (zona != null) {
+            zona.setNivelRiesgo(nuevoNivelRiesgo);
+            zona.setPersonasAfectadas(nuevasPersonasAfectadas);
+            zona.actualizarEstado();
+            System.out.println("🟡 Zona actualizada: " + zona);
         } else {
-            generarReporte("Error asignando recurso: " + nombreRecurso + " a " + nombreZona);
+            System.out.println("⚠️ No se encontró la zona especificada.");
         }
     }
 
-    public Collection<Recurso> listarRecursos() {
-        return recursosDisponibles.values();
+    public List<ZonaAfectada> obtenerZonasEnRiesgoAlto() {
+        List<ZonaAfectada> zonasCriticas = new ArrayList<>();
+        for (ZonaAfectada z : zonasAfectadas.values()) {
+            if (z.getNivelRiesgo() >= 7) zonasCriticas.add(z);
+        }
+        return zonasCriticas;
     }
 
-    // -------------------------------
-    // GESTIÓN DE RUTAS
-    // -------------------------------
-    public void definirRuta(String origen, String destino, int distancia) {
-        grafoRutas.agregarArista(origen, destino, distancia);
-        generarReporte("Ruta definida: " + origen + " → " + destino + " (" + distancia + " km)");
+    // ============================================================
+    // ============== GESTIÓN DE RECURSOS =========================
+    // ============================================================
+
+    public void registrarRecurso(Recurso recurso) {
+        recursosDisponibles.put(recurso.getId(), recurso);
+        arbolRecursos.insertarRecurso(recurso);
+        System.out.println("🧰 Recurso registrado: " + recurso);
     }
 
-    public List<String> calcularRutaMasCorta(String origen, String destino) {
+    public void asignarRecursoAZona(String idRecurso, String nombreZona) {
+        Recurso recurso = recursosDisponibles.get(idRecurso);
+        ZonaAfectada zona = zonasAfectadas.get(nombreZona);
+        if (recurso != null && zona != null) {
+            zona.asignarRecurso(recurso);
+            arbolRecursos.eliminarRecurso(idRecurso); // simula su distribución
+            System.out.println("🚚 Recurso " + idRecurso + " asignado a la zona " + nombreZona);
+        } else {
+            System.out.println("⚠️ No se pudo asignar el recurso. Verifique los datos.");
+        }
+    }
+
+    public void listarRecursosDisponibles() {
+        System.out.println("=== Recursos disponibles ===");
+        for (Recurso r : recursosDisponibles.values()) {
+            System.out.println(r);
+        }
+    }
+
+    // ============================================================
+    // ============== GESTIÓN DE EVACUACIONES =====================
+    // ============================================================
+
+    public void registrarZonaEvacuacion(ZonaEvacuacion z) {
+        colaEvacuaciones.agregarZonaEvacuacion(z);
+        System.out.println("🚨 Zona agregada a cola de evacuaciones: " + z.getNombreZona());
+    }
+
+    public void ejecutarEvacuaciones() {
+        System.out.println("\n🏃 Ejecutando evacuaciones prioritarias...");
+        while (!colaEvacuaciones.estaVacia()) {
+            ZonaEvacuacion zona = colaEvacuaciones.obtenerZonaPrioritaria();
+            System.out.println("🚨 Evacuando zona: " + zona);
+        }
+        System.out.println("✅ Evacuaciones completadas.");
+    }
+
+    // ============================================================
+    // ============== GESTIÓN DE RUTAS =============================
+    // ============================================================
+
+    public void agregarRuta(String origen, String destino, double distancia, Date tiempo) {
+        Ruta nuevaRuta = new Ruta(UUID.randomUUID().toString(), origen, destino, tiempo, distancia);
+        grafoRutas.agregarRuta(origen, destino, distancia);
+        System.out.println("🛣️ Ruta agregada: " + origen + " → " + destino + " (" + distancia + " km)");
+    }
+
+    public List<NodoGrafo> calcularRutaMasCorta(String origen, String destino) {
+        System.out.println("🗺️ Calculando ruta más corta entre " + origen + " y " + destino + "...");
         return grafoRutas.obtenerRutaMasCorta(origen, destino);
     }
 
-    // -------------------------------
-    // EVACUACIONES
-    // -------------------------------
-    public void registrarEvacuacion(String zona, int prioridad, int personas) {
-        colaEvacuaciones.agregarZona(zona, prioridad, personas);
-        generarReporte("Evacuación registrada para: " + zona);
+    public void mostrarGrafoRutas() {
+        grafoRutas.mostrarGrafo();
     }
 
-    public void procesarEvacuaciones() {
-        while (!colaEvacuaciones.estaVacia()) {
-            String evacuada = colaEvacuaciones.atenderZona();
-            generarReporte("Evacuación completada en: " + evacuada);
+    // ============================================================
+    // ============== REPORTES Y ESTADÍSTICAS =====================
+    // ============================================================
+
+    public void generarReporte(LocalDate fecha, String contenido, Usuario usuario) {
+        Reporte reporte = new Reporte(fecha,contenido, usuario);
+        reportes.add(reporte);
+        System.out.println("📝 Reporte generado: " + contenido);
+    }
+
+    public void listarReportes() {
+        System.out.println("=== Reportes Generados ===");
+        for (Reporte r : reportes) {
+            System.out.println(r);
         }
     }
 
-    // -------------------------------
-    // REPORTES Y CONSULTAS
-    // -------------------------------
-    public void generarReporte(String mensaje) {
-        String fecha = new Date().toString();
-        reportes.add("[" + fecha + "] " + mensaje);
-    }
-
-    public void mostrarReportes() {
-        System.out.println("📋 HISTORIAL DE REPORTES:");
-        for (String r : reportes) {
-            System.out.println(" - " + r);
-        }
-    }
-
-    public void mostrarEstadoGeneral() {
-        System.out.println("\n🌍 ESTADO GENERAL DEL SISTEMA:");
-        System.out.println("Zonas registradas: " + zonasAfectadas.size());
+    public void generarEstadisticas() {
+        System.out.println("\n📊 Estadísticas del Sistema:");
+        System.out.println("Zonas afectadas: " + zonasAfectadas.size());
         System.out.println("Recursos disponibles: " + recursosDisponibles.size());
-        System.out.println("Evacuaciones pendientes: " + (colaEvacuaciones.estaVacia() ? 0 : "Sí"));
-        System.out.println("Rutas totales: " + grafoRutas.obtenerNumeroDeAristas());
+        System.out.println("Reportes emitidos: " + reportes.size());
+        System.out.println("Usuarios registrados: " + listaUsuarios.size());
     }
 
-    // -------------------------------
-    // GETTERS
-    // -------------------------------
-    public GrafoDirigido getGrafoRutas() { return grafoRutas; }
-    public ArbolDistribucion getArbolRecursos() { return arbolRecursos; }
-    public ColaPrioridadEvacuaciones getColaEvacuaciones() { return colaEvacuaciones; }
-    public Map<String, ZonaAfectada> getZonasAfectadas() { return zonasAfectadas; }
-    public Map<String, Recurso> getRecursosDisponibles() { return recursosDisponibles; }
+    // ============================================================
+    // ============== SIMULACIÓN GLOBAL ============================
+    // ============================================================
+
+    public void simularGestionDesastre() {
+        System.out.println("\n🌎 Iniciando simulación de gestión de desastre...");
+
+        System.out.println("\n→ Evaluando zonas afectadas...");
+        for (ZonaAfectada zona : zonasAfectadas.values()) {
+            zona.actualizarEstado();
+            System.out.println("Zona: " + zona.getNombre() + " | Estado: " + zona.getEstado());
+            if (zona.necesitaEvacuacion()) {
+                ZonaEvacuacion zEv = new ZonaEvacuacion(
+                        "EV-" + zona.getNombre(),
+                        zona.getNombre(),
+                        zona.getPersonasAfectadas(),
+                        zona.getNivelRiesgo()
+                );
+                registrarZonaEvacuacion(zEv);
+            }
+        }
+
+        System.out.println("\n→ Ejecutando evacuaciones...");
+        ejecutarEvacuaciones();
+
+        System.out.println("\n→ Distribuyendo recursos...");
+        for (ZonaAfectada zona : zonasAfectadas.values()) {
+            if (zona.getRecursosAsignados().isEmpty() && !recursosDisponibles.isEmpty()) {
+                Recurso recurso = recursosDisponibles.values().iterator().next();
+                asignarRecursoAZona(recurso.getId(), zona.getNombre());
+            }
+        }
+
+        System.out.println("\n✅ Simulación finalizada.");
+        generarEstadisticas();
+    }
 }
